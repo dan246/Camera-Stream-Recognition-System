@@ -1,0 +1,5 @@
+opencv-python-headless
+redis
+numpy
+flask
+requests
