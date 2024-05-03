@@ -167,14 +167,14 @@ def handle_rectangles(ID):
 
     if request.method == 'POST':
         rects = request.get_json()
-        # 使用 hash 存儲每個矩形數據，並確保使用 str 儲存
+        # 使用 hash 存儲每個矩形資料，並確保使用 str 儲存
         for idx, rect in enumerate(rects):
             r.hset(f"{rects_key}:{idx}", mapping={k: str(v) for k, v in rect.items()})
         return jsonify(message="矩形已儲存"), 200
 
     elif request.method == 'GET':
         rects = []
-        # 掃描並解碼儲存在 Redis 中的矩形數據
+        # 掃描並解碼儲存在 Redis 中的矩形資料
         for key in r.scan_iter(f"{rects_key}:*"):
             rect_data = r.hgetall(key)
             rect = {k.decode(): int(float(v.decode())) for k, v in rect_data.items()}
@@ -182,7 +182,7 @@ def handle_rectangles(ID):
         return jsonify(rects)
 
     elif request.method == 'DELETE':
-        # 刪除所有矩形數據
+        # 刪除所有矩形資料
         for key in r.scan_iter(f"{rects_key}:*"):
             r.delete(key)
         return jsonify(message="所有矩形已清除"), 200
@@ -208,13 +208,13 @@ def images():
     folder_id = request.args.get('id', '0')
     folder_path = f'image/{folder_id}'
     
-    # 將時間戳參數解析成 datetime 物件，然後根據需求格式解析
+    # 將時間戳解碼成 datetime 物件，然後根據需求格式解碼
     time_str = request.args.get('time', '')
     try:
-        # 假設時間參數是 '20240503145947' 這種格式
+        # unix2utc
         current_time = datetime.utcfromtimestamp(float(time_str))
     except ValueError:
-        # 如果時間格式不正確，可以設置一個預設值或返回錯誤
+        # 如果時間格式不正確，返回預設值
         current_time = datetime.now()  # 或是返回一個錯誤
 
     # 計算開始和結束時間
