@@ -41,7 +41,7 @@
 
 1. **docker-comose 檔可依照其他需求新建其他 container**
 
-   ex. DB、前台 web 等等
+   ex. DB、前台 web 等等，這裡只有後台和一點點網頁，大部分需要透過 API 交流
 
 
 3. **啟動後再執行 addw1(有 DB 則在camera_100 裡的 camera_manager 設定連線方式)**
