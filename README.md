@@ -39,12 +39,12 @@
 
 1. **docker-comose檔可依照其他需求新建其他container**
 
-ex. DB、前台 web 等等
+   ex. DB、前台 web 等等
 
 
 3. **啟動後再執行addw1(有DB則在camera_100 裡的 camera_manager 設定連線方式)**
 
-如果沒有DB，由於redis啟動後還沒註冊事件，所以啟動後需再執行addw1.py來註冊事件和分配容器
+   如果沒有DB，由於redis啟動後還沒註冊事件，所以啟動後需再執行addw1.py來註冊事件和分配容器
 
 3. **redis 攝影機輸入的資料為 id + camera_url**
 
