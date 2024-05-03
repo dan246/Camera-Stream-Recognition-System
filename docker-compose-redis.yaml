@@ -1,0 +1,44 @@
+version: '3'
+services:
+  redis:
+    image: redis
+    ports:
+      - "6380:6379"
+
+  worker_1:
+    build:
+      context: ./
+      dockerfile:  Dockerfile/rtsptestDockerfile
+    image: rtsptest
+    environment:
+      - WORKER_ID=1 
+    depends_on:
+      - redis
+    volumes:
+      - ./rtsp_test/frames/:/app/frames
+    # command: sleep 100000
+
+  worker_2:
+    build:
+      context: ./
+      dockerfile:  Dockerfile/rtsptestDockerfile
+    image: rtsptest
+    environment:
+      - WORKER_ID=2
+    depends_on:
+      - redis
+    volumes:
+      - ./rtsp_test/frames/:/app/frames
+    # command: sleep 100000
+
+  worker_3:
+    build:
+      context: ./
+      dockerfile:  Dockerfile/rtsptestDockerfile
+    image: rtsptest
+    environment:
+      - WORKER_ID=3 
+    depends_on:
+      - redis
+    volumes:
+      - ./rtsp_test/frames/:/app/frames
