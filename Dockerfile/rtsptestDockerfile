@@ -1,0 +1,16 @@
+FROM python:3.8-slim
+
+
+# 複製應用程式碼到容器
+COPY ./rtsp_test /app
+
+WORKDIR /app
+
+# 安裝必要的 Python 套件
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+
+
+
+# 啟動腳本
+CMD ["python", "/app/app.py"]

@@ -1,0 +1,19 @@
+FROM pytorch/pytorch:latest
+
+# 設置工作目錄
+WORKDIR /app
+
+# 複製當前目錄下的所有文件到容器內的 /app 中
+COPY ./http_object_recognition /app
+# 安裝PyAudio依賴
+RUN apt-get update \
+    && apt-get install -y portaudio19-dev python3-pyaudio pulseaudio
+
+# 安裝必要的 Python 套件
+RUN pip install --no-cache-dir numpy transformers  soundfile SpeechRecognition
+
+RUN conda install pyaudio -y
+RUN pip install tqdm 
+RUN pip install ultralytics --no-deps 
+RUN pip install opencv-python-headless aiohttp matplotlib pandas
+
