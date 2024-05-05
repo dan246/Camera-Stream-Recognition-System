@@ -5,6 +5,7 @@
 
 可同時處理超過 100 台攝影機串流，redis 會將功能平均分配到其他工作器上，所以如果覺得慢 or 跑不動， worker 加多一點，並修改 camera_100 裡的 camera_manager(這裡可考慮在 docker-compose 設環境變數動態調整)即可。
 
+![未命名](https://github.com/dan246/Camera-Stream-Recognition-System/assets/72447312/895eb525-3180-4f74-a484-de83e808aee9)
 
 
 ## 功能
@@ -15,7 +16,7 @@
 - **數據存檔**：將捕獲的圖像存儲到本地系統並同步路徑信息到 Redis。
 - **動態更新**：可動態更新攝影機串流列表，並通過 Redis 實現多個工作節點間的同步。
 
-![未命名](https://github.com/dan246/Camera-Stream-Recognition-System/assets/72447312/4e47758a-29bd-4ed5-a1e3-9e83f0321153)
+
 
 ## 開始
 
