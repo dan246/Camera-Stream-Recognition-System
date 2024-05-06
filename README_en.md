@@ -1,5 +1,9 @@
 # Camera-Stream-Recognition-System
 
+[english version](https://github.com/dan246/Camera-Stream-Recognition-System/blob/main/README_en.md)
+
+[中文版本](https://github.com/dan246/Camera-Stream-Recognition-System/blob/main/README.md)
+
 This project utilizes Python and Redis to manage and recognize multiple camera streams. Key features include real-time capturing of camera streams, object recognition, image saving, and dynamic updating of stream URLs.
 
 The system can handle over 100 camera streams simultaneously. Redis distributes tasks evenly across workers, so if the system feels slow or unresponsive, simply add more workers and adjust the settings in `camera_100`'s `camera_manager` (consider setting environment variables dynamically with docker-compose).
