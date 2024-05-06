@@ -13,7 +13,7 @@ The system can handle over 100 camera streams simultaneously. Redis distributes 
 ## Features
 
 - **Stream Capture**: Continuously captures images from multiple camera feeds.
-- **Object Recognition**: Utilizes deep learning models to recognize objects(ex. License plate, abnormal behavior such as falls or violent behavior) in captured images.
+- **Object Recognition**: Utilizes deep learning models to recognize objects in captured images(ex. License plate, abnormal behavior such as falls or violent behavior).
 - **Video Playback**: Video playback functionality can be customized as needed.
 - **Data Archiving**: Captured images are stored locally and path information is synchronized to Redis.
 - **Dynamic Updates**: Dynamically updates the list of camera streams and synchronizes across multiple worker nodes using Redis.
