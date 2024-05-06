@@ -43,6 +43,11 @@ The following will help you deploy and run the system on your local environment.
   docker-compose up -d
   ```
 
+### API DOC
+```bash
+localhost:15439
+```
+
 ### Notes
 1. The docker-compose file can be customized to include additional containers as neededExamples include DB, frontend web, nginx, etc. This setup primarily involves the backend and a minimal web interface, with most interactions occurring via API.
 
