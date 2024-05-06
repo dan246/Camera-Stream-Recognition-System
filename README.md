@@ -48,6 +48,13 @@
    docker-compose up -d
    ```
 
+
+### API文檔
+```bash
+localhost:15439
+```
+
+
 ### 注意事項
 
 1. **docker-comose 檔可依照其他需求新建其他 container**
@@ -66,5 +73,6 @@
    frames 同時會掛載到 camera_100 取回放
 
 5. **rtsp 網址需額外使用 go2RTC 轉址**
+
 
 持續修改優化中
