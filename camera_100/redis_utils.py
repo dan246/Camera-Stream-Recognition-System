@@ -26,18 +26,15 @@ def get_all_camera_status(r):
     for key in r.keys("camera_*_status"):
         camera_id = key.decode().split('_')[1]
         if r.exists(f'camera_{camera_id}_status'):
-            camera_status = r.get(key)
-            last_timestamp = r.get(f'camera_{camera_id}_last_timestamp')
-            if camera_status is not None and last_timestamp is not None:
-                camera_status = camera_status.decode()
-                last_timestamp = last_timestamp.decode()
-                status[camera_id] = {
-                    "alive": camera_status,
-                    "last_image_timestamp": last_timestamp
-                }
-            else:
-                status[camera_id] = {
-                    "alive": "unknown",
-                    "last_image_timestamp": "unknown"
-                }
+            camera_status = r.get(f'camera_{camera_id}_status').decode()
+            last_timestamp = r.get(f'camera_{camera_id}_last_timestamp').decode() if r.exists(f'camera_{camera_id}_last_timestamp') else "unknown"
+            fps = r.get(f'camera_{camera_id}_fps').decode() if r.exists(f'camera_{camera_id}_fps') else "unknown"
+            latest_frame_path = r.get(f'camera_{camera_id}_latest_frame_path').decode() if r.exists(f'camera_{camera_id}_latest_frame_path') else "No image saved"
+
+            status[camera_id] = {
+                "alive": camera_status,
+                "last_image_timestamp": last_timestamp,
+                "fps": fps,
+                "latest_frame_path": latest_frame_path  # 新增圖片路徑
+            }
     return status
