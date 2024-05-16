@@ -6,17 +6,48 @@ import numpy as np
 from time import time, sleep, localtime, strftime
 from io import BytesIO
 import csv
+from datetime import datetime, timedelta
+import os
 
+DELDAYS = os.getenv('DELDAYS')
 # 初始化 Redis 連線
 redis_host = 'redis'
 redis_port = 6379
 r = redis.Redis(host=redis_host, port=redis_port, db=0)
 
+def remove_old_files(base_path, days=DELDAYS):
+    """移除指定路徑中特定日期的檔案"""
+    target_date = (datetime.now() - timedelta(days=days)).strftime('%Y%m%d')
+    
+    # 遍歷每個攝影機的目錄
+    for camera_name in os.listdir(base_path):
+        camera_path = os.path.join(base_path, camera_name)
+        if os.path.isdir(camera_path):  # 確保是目錄
+            target_path = os.path.join(camera_path, target_date)
+            if os.path.exists(target_path):
+                for root, dirs, files in os.walk(target_path, topdown=False):
+                    for file in files:
+                        os.remove(os.path.join(root, file))
+                        print(f"Deleted file: {os.path.join(root, file)}")
+                    for dir in dirs:
+                        os.rmdir(os.path.join(root, dir))
+                        print(f"Deleted directory: {os.path.join(root, dir)}")
+                print(f"All files from {target_path} have been deleted.")
+                # 檢查並刪除現在應該是空的根目錄
+                if not os.listdir(target_path):
+                    os.rmdir(target_path)
+                    print(f"Deleted empty directory: {target_path}")
+                print(f"All files from {target_path} have been deleted.")
+            else:
+                print(f"No files found for date {target_date} in {camera_path}.")
+
 
 def fetch_frame(camera_id, camera_url, worker_key, stop_event):
     cap = cv2.VideoCapture(camera_url)
     reconnect_interval = 30  # 重新連線時間
-    frame_count = 0  # 新增幀計數器
+    frame_count = 0  # 幀計數器
+    last_time = time()  # 記錄上次時間戳
+    file_path = None  # 初始化 file_path 變量
 
     while not stop_event.is_set():
         if not cap.isOpened():
@@ -29,23 +60,32 @@ def fetch_frame(camera_id, camera_url, worker_key, stop_event):
         ret, frame = cap.read()
         if ret:
             frame_count += 1  # 更新幀計數器
-            timestamp = time() + 8 * 3600  # 加 8 小時
+            current_time = time()
+            elapsed = current_time - last_time
+
+            if elapsed >= 1.0:  # 每隔一秒計算 FPS
+                fps = frame_count / elapsed
+                r.set(f'camera_{camera_id}_fps', fps)
+                print(f"Camera {camera_id} FPS: {fps}")
+                frame_count = 0  # 重置幀計數器
+                last_time = current_time
+
+            timestamp = current_time + 8 * 3600  # 加 8 小時
             timestamp_str = strftime("%Y%m%d%H%M%S", localtime(timestamp))
             
-            # 每10幀存一次圖
-            if frame_count % 10 == 0:
+            # 每100幀存一次圖
+            if frame_count % 100 == 0:
                 folder_path = os.path.join('frames', str(camera_id), timestamp_str[:8], timestamp_str[8:10])
                 os.makedirs(folder_path, exist_ok=True)
                 file_name = f"{timestamp_str}.jpg"
                 file_path = os.path.join(folder_path, file_name)
                 cv2.imwrite(file_path, frame)
                 print(f"Saved frame: {file_path}")
+                r.set(f'camera_{camera_id}_latest_frame_path', file_path)  # 儲存最新圖片路徑至 Redis
 
             _, buffer = cv2.imencode('.jpg', frame)
             image_data = buffer.tobytes()
             r.set(f'camera_{camera_id}_latest_frame', image_data)
-            if frame_count % 10 == 0:
-                r.set(f'camera_{camera_id}_latest_frame_path', file_path)
             r.set(f'camera_{camera_id}_status', 'True')
             r.set(f'camera_{camera_id}_last_timestamp', timestamp_str)
         else:
@@ -55,9 +95,8 @@ def fetch_frame(camera_id, camera_url, worker_key, stop_event):
             print(f"Reconnecting to camera at URL: {camera_url}")
             sleep(1)
             r.set(f'camera_{camera_id}_status', 'False')
-            frame_count = 0  # 重置幀計數器，因為相機已重新連線
 
-        sleep(0.1)  # 每0.1秒檢查一次
+        # sleep(0.1)  # 每0.1秒檢查一次
 
     cap.release()
 
@@ -76,24 +115,14 @@ def monitor_cameras(worker_key, camera_urls):
     return threads
 
 def setup_camera_manager():
-    timer = threading.Timer(1, setup_camera_manager)  # 重新設定 Timer
-    timer.start()
+    # 每天檢查一次是否有需要刪除的檔案
+    threading.Timer(10, setup_camera_manager).start()
+    remove_old_files('/app/frames')  # 調整路徑至所有攝影機的根目錄
 
 
-def write_cameras_info_to_csv():
-    header = ['Worker ID', 'Camera Name', 'Camera URL']
-    with open('workers_cameras_info.csv', 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(header)
-        for worker_id in range(1, 7):  # 更新這裡以包括實際的 worker ID 範圍
-            worker_key = f'worker_{worker_id}_urls'
-            camera_urls = r.smembers(worker_key)
-            for cam in camera_urls:
-                parts = cam.decode('utf-8').split('|')
-                camera_id, camera_name, camera_url = parts[0], parts[1], parts[2]
-                writer.writerow([worker_id, camera_name, camera_url])
 
 def main():
+    # setup_camera_manager() 
     worker_id = os.getenv('WORKER_ID')
     if worker_id is None:
         raise ValueError("WORKER_ID environment variable is not set.")
@@ -101,10 +130,10 @@ def main():
 
     pubsub = r.pubsub()
     pubsub.subscribe([f'{worker_key}_update'])
-    
+
     current_urls = set(r.smembers(worker_key))
     threads = monitor_cameras(worker_key, current_urls)
-    
+
     try:
         for message in pubsub.listen():
             if message['type'] == 'message':
@@ -118,6 +147,7 @@ def main():
                     current_urls = new_urls
     finally:
         pubsub.close()
+
 
 
 
