@@ -122,7 +122,7 @@ def setup_camera_manager():
 
 
 def main():
-    # setup_camera_manager() 
+    setup_camera_manager() 
     worker_id = os.getenv('WORKER_ID')
     if worker_id is None:
         raise ValueError("WORKER_ID environment variable is not set.")
