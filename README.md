@@ -63,7 +63,7 @@ localhost:15439
    ex. DB、前台 web 、 nginx 等等，這裡只有後台和一點點網頁，大部分需要透過 API 交流
 
 
-3. **啟動後再執行 addw1(有 DB 則在camera_100 裡的 camera_manager 設定連線方式)**
+2. **啟動後再執行 addw1(有 DB 則在camera_100 裡的 camera_manager 設定連線方式)，也可以透過API文檔裡的 API 直接設定**
 
    如果沒有 DB，由於 Redis 啟動後還沒註冊事件，所以啟動後需再執行 addw1.py 來註冊事件和分配容器
 
