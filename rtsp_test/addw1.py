@@ -2,9 +2,9 @@ import redis
 r = redis.Redis(host='redis', port=6379, db=0)
 # 假設攝影機的 URL 列表已經提前準備好
 camera_urls = [
-"https://cctv-ss03.thb.gov.tw:443/T144-001K+150E",
-"https://cctv-ss03.thb.gov.tw:443/T144-003K+200E",
-"https://cctv-ss03.thb.gov.tw:443/T144-003K+250W",
+"URL1",
+"URL2",
+"URL3",
 ]
 
 
