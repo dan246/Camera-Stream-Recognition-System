@@ -9,6 +9,7 @@ from datetime import datetime
 from PIL import Image, ImageDraw
 import base64
 import io
+import os
 from datetime import datetime
 app = Flask(__name__)
 api = Api(app)
@@ -16,6 +17,7 @@ api = Api(app)
 # 初始化 Redis
 r = init_redis()
 
+WORKER = os.getenv('WORKER')
 # def setup_camera_manager():
 #     manager = CameraManager()
 #     manager.run()
@@ -68,18 +70,18 @@ class SetCameraUrls(Resource):
         r.flushall()
 
         # 清空舊的攝影機列表
-        for worker_id in range(1, 24):
+        for worker_id in range(1, WORKER+1):
             worker_key = f'worker_{worker_id}_urls'
             r.delete(worker_key)
 
         # 分配新的攝影機到容器
         for count, url in enumerate(camera_urls):
-            worker_id = count % 23 + 1  # 工作器 ID
+            worker_id = count % WORKER + 1  # 工作器 ID
             worker_key = f'worker_{worker_id}_urls'
             r.sadd(worker_key, f'{count}|{url}')
 
         # 發布更新事件給所有工作器
-        for worker_id in range(1, 24):
+        for worker_id in range(1, WORKER+1):
             worker_key = f'worker_{worker_id}_urls'
             r.publish(f'{worker_key}_update', 'updated')
 
