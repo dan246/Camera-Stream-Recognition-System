@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_file, render_template, Response
 from flask_restx import Api, Resource, fields
-from redis_utils import init_redis, CameraSnapFetcher, get_all_camera_status
-from camera_manager import CameraManager
+from redis_utils import init_redis, CameraSnapFetcher, get_all_camera_status, get_all_camera_lists
+# from camera_manager import CameraManager
 from time_stamped_images import TimeStampedImages
 import threading
 import time
@@ -16,13 +16,13 @@ api = Api(app)
 # 初始化 Redis
 r = init_redis()
 
-def setup_camera_manager():
-    manager = CameraManager()
-    manager.run()
-    timer = threading.Timer(1, setup_camera_manager)
-    timer.start()
+# def setup_camera_manager():
+#     manager = CameraManager()
+#     manager.run()
+#     timer = threading.Timer(1, setup_camera_manager)
+#     timer.start()
 
-setup_camera_manager()
+# setup_camera_manager()
 
 camera_model = api.model('Camera', {
     'camera_id': fields.String(required=True, description='The camera identifier'),
@@ -31,6 +31,10 @@ camera_model = api.model('Camera', {
 
 camera_ids_model = api.model('CameraIds', {
     'camera_ids': fields.List(fields.String, required=True, description='List of camera identifiers')
+})
+
+camera_urls_model = api.model('CameraUrlList', {
+    'urls': fields.List(fields.String, required=True, description='List of camera URLs')
 })
 
 rect_model = api.model('Rectangle', {
@@ -47,14 +51,59 @@ class CameraStatus(Resource):
         status = get_all_camera_status(r)
         return status, 200
 
-@app.route('/get_snapshot/<camera_id>')
-def get_latest_frame(camera_id):
-    image_data = r.get(f'camera_{camera_id}_latest_frame')
-    if image_data:
-        return Response(image_data, mimetype='image/jpeg')
-    else:
-        return send_file('no_single.jpg', mimetype='image/jpeg')
-        # return "No image found", 404
+@api.route('/get_camera_lists')
+class CameraStatus(Resource):
+    def get(self):
+        status = get_all_camera_lists(r)
+        return status, 200
+
+@api.route('/set_camera_urls')
+class SetCameraUrls(Resource):
+    @api.expect(camera_urls_model)
+    def post(self):
+        data = request.get_json()
+        camera_urls = data['urls']
+
+        # 清空 Redis 數據庫
+        r.flushall()
+
+        # 清空舊的攝影機列表
+        for worker_id in range(1, 24):
+            worker_key = f'worker_{worker_id}_urls'
+            r.delete(worker_key)
+
+        # 分配新的攝影機到容器
+        for count, url in enumerate(camera_urls):
+            worker_id = count % 23 + 1  # 工作器 ID
+            worker_key = f'worker_{worker_id}_urls'
+            r.sadd(worker_key, f'{count}|{url}')
+
+        # 發布更新事件給所有工作器
+        for worker_id in range(1, 24):
+            worker_key = f'worker_{worker_id}_urls'
+            r.publish(f'{worker_key}_update', 'updated')
+
+        response = jsonify(message="Camera URLs have been successfully added and distributed to workers.")
+        response.status_code = 200
+        return response
+
+# @app.route('/get_snapshot/<camera_id>')
+# def get_latest_frame(camera_id):
+#     image_data = r.get(f'camera_{camera_id}_latest_frame')
+#     if image_data:
+#         return Response(image_data, mimetype='image/jpeg')
+#     else:
+#         return send_file('no_single.jpg', mimetype='image/jpeg')
+#         # return "No image found", 404
+
+@api.route('/get_snapshot/<string:camera_id>')
+class GetSnapshot(Resource):
+    def get(self, camera_id):
+        image_data = r.get(f'camera_{camera_id}_latest_frame')
+        if image_data:
+            return Response(image_data, mimetype='image/jpeg')
+        else:
+            return send_file('no_single.jpg', mimetype='image/jpeg')
 
 def generate_frames(camera_id):
     while True:
