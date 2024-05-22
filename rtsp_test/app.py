@@ -4,16 +4,42 @@ import cv2
 import threading
 import numpy as np
 from time import time, sleep, localtime, strftime
-from io import BytesIO
-import csv
 from datetime import datetime, timedelta
 import os
-
+import base64
+import os
+import requests
+from io import BytesIO
+from ultralytics import YOLO
+import json
+MODELURL = os.getenv('MODELURL')
 DELDAYS = os.getenv('DELDAYS')
 # 初始化 Redis 連線
 redis_host = 'redis'
 redis_port = 6379
 r = redis.Redis(host=redis_host, port=redis_port, db=0)
+
+
+# Function to download the model weights if not already downloaded
+def download_model_weights(url, save_path):
+    if not os.path.exists(save_path):
+        print("Downloading model weights...")
+        response = requests.get(url)
+        if response.status_code == 200:
+            with open(save_path, "wb") as f:
+                f.write(response.content)
+            print("Model weights downloaded successfully.")
+        else:
+            print("Failed to download model weights.")
+
+# Function to predict using YOLO model and store results in Redis
+def predict_with_yolo(model, image_paths, redis_client):
+    results = model(image_paths)
+    for result, image_path in zip(results, image_paths):
+        camera_id = image_path.split("/")[-2]  # Assuming camera ID is part of the path
+        redis_key = f"camera:{camera_id}:latest_detection"
+        redis_client.set(redis_key, str(result), ex=86400)  # Store results with a 1-day expiration
+    return results
 
 def remove_old_files(base_path, days=DELDAYS):
     """移除指定路徑中特定日期的檔案"""
@@ -48,7 +74,15 @@ def fetch_frame(camera_id, camera_url, worker_key, stop_event):
     frame_count = 0  # 幀計數器
     last_time = time()  # 記錄上次時間戳
     file_path = None  # 初始化 file_path 變量
+    model_weights_url = MODELURL
+    model_weights_save_path = base64.b64encode(model_weights_url.encode()).decode() + ".pt"
 
+    # Download model weights
+    download_model_weights(model_weights_url, model_weights_save_path)
+
+    # Load YOLO model
+    model = YOLO(model_weights_save_path)
+    
     while not stop_event.is_set():
         if not cap.isOpened():
             print(f"Camera connection lost. Reconnecting in {reconnect_interval} seconds...")
@@ -59,6 +93,23 @@ def fetch_frame(camera_id, camera_url, worker_key, stop_event):
 
         ret, frame = cap.read()
         if ret:
+            
+            results = model.track(source=frame, conf=0.3, iou=0.5, show=False)
+            boxes = results[0].boxes
+            if len(boxes.cls) > 0:
+                try:
+                    cls = [model.names[int(item)] for item in boxes.cls]
+                    id = [str(int(item)) for item in boxes.id]
+                    xywh = [[str(int(xywh)) for xywh in item] for item in boxes.xywh]
+                    xywh_serialized = json.dumps(xywh)
+                except:
+                    id = []
+                    xywh_serialized = json.dumps([])
+                    cls = []
+            else:
+                id = []
+                xywh_serialized = json.dumps([])
+                cls = []
             frame_count += 1  # 更新幀計數器
             current_time = time()
             elapsed = current_time - last_time
@@ -88,6 +139,11 @@ def fetch_frame(camera_id, camera_url, worker_key, stop_event):
             r.set(f'camera_{camera_id}_latest_frame', image_data)
             r.set(f'camera_{camera_id}_status', 'True')
             r.set(f'camera_{camera_id}_last_timestamp', timestamp_str)
+            r.set(f'camera_{camera_id}_url', camera_url)
+
+            r.set(f'camera_{camera_id}_last_cls', ','.join(cls))
+            r.set(f'camera_{camera_id}_last_id', ','.join(id))
+            r.set(f'camera_{camera_id}_last_xywh', xywh_serialized)
         else:
             print("Error reading frame. Retrying...")
             cap.release()
@@ -122,7 +178,8 @@ def setup_camera_manager():
 
 
 def main():
-    setup_camera_manager() 
+
+    # setup_camera_manager() 
     worker_id = os.getenv('WORKER_ID')
     if worker_id is None:
         raise ValueError("WORKER_ID environment variable is not set.")
