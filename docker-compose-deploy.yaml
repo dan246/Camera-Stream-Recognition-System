@@ -1,30 +1,5 @@
 version: '3.8'
 services:
-  httpobjectrecognition:
-    container_name: http_object_recognition
-    image: http_object_recognition
-    restart: always
-    stdin_open: true
-    tty: true
-    build:
-      context: ./
-      dockerfile: Dockerfile/httpobjectrecognitionDockerfile
-    env_file:
-      - path: docker_envs/httpobjectrecognition.env
-        required: true
-    volumes:
-      - ./http_object_recognition:/app
-    privileged: true
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
-    command: python app.py
-
-
   camera_100:
     container_name: camera_100
     image: camera_100
@@ -38,6 +13,8 @@ services:
     volumes:
       - ./camera_100:/app
       - ./rtsp_test/frames:/app/image
+    environment:
+      - WORKER = 3
     ports:
       - "15439:5000"
     command: sh -c "flask run --no-debugger --host 0.0.0.0"
