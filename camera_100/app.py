@@ -64,26 +64,48 @@ class SetCameraUrls(Resource):
     @api.expect(camera_urls_model)
     def post(self):
         data = request.get_json()
-        camera_urls = data['urls']
+        camera_urls = data.get('urls', [])
+
+        if not camera_urls:
+            response = jsonify(message="No URLs provided.")
+            response.status_code = 400
+            return response
 
         # 清空 Redis 數據庫
+        print("Flushing all Redis data")
         r.flushall()
 
         # 清空舊的攝影機列表
-        for worker_id in range(1, WORKER+1):
+        for worker_id in range(1, 24):
             worker_key = f'worker_{worker_id}_urls'
             r.delete(worker_key)
+            print(f"Deleted worker key: {worker_key}")
 
         # 分配新的攝影機到容器
         for count, url in enumerate(camera_urls):
-            worker_id = count % WORKER + 1  # 工作器 ID
+            worker_id = (count % 23) + 1  # 工作器 ID
             worker_key = f'worker_{worker_id}_urls'
-            r.sadd(worker_key, f'{count}|{url}')
+            result = r.sadd(worker_key, f'{count + 1}|{url}')  # 將攝影機 ID 從 1 開始
+            if result == 1:
+                print(f'Successfully added URL {url} to worker {worker_id}')
+            else:
+                print(f'Failed to add URL {url} to worker {worker_id}')
+            # 新增 camera_*_url 鍵
+            camera_key = f'camera_{count + 1}_url'  # 將攝影機 ID 從 1 開始
+            r.set(camera_key, url)
+            print(f'Set {camera_key} to {url}')
 
         # 發布更新事件給所有工作器
-        for worker_id in range(1, WORKER+1):
+        for worker_id in range(1, 24):
             worker_key = f'worker_{worker_id}_urls'
-            r.publish(f'{worker_key}_update', 'updated')
+            result = r.publish(f'{worker_key}_update', 'updated')
+            print(f'Publishing update to worker {worker_id} with result: {result}')
+
+        # 驗證所有的 key 和它們的值
+        for worker_id in range(1, 24):
+            worker_key = f'worker_{worker_id}_urls'
+            urls = r.smembers(worker_key)
+            print(f'Worker {worker_id} has URLs: {urls}')
 
         response = jsonify(message="Camera URLs have been successfully added and distributed to workers.")
         response.status_code = 200
@@ -208,6 +230,11 @@ def images():
     image_paths = tsi.find_images_in_range(start_timestamp, end_timestamp)
     
     return Response(generate_image_stream(image_paths), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+
+if __name__ == '__main__':
+    app.run()
 
 
 
