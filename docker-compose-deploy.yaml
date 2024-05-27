@@ -1,20 +1,22 @@
 version: '3.8'
 services:
-  camera_100:
-    container_name: camera_100
-    image: camera_100
+  camera_ctrler:
+    container_name: camera_ctrler
+    image: camera_ctrler
     build:
       context: ./
-      dockerfile:  Dockerfile/camera100Dockerfile
+      dockerfile:  Dockerfile/cameractrlDockerfile
     stdin_open: true
     tty: true
     restart: always
-    env_file: docker_envs/citynotify.env
     volumes:
       - ./camera_100:/app
       - ./rtsp_test/frames:/app/image
     environment:
-      - WORKER = 3
+      - WORKER=3
+      - SERVERIP=YOUR_SERVERIP
+      - ACCOUNT=YOUR_ACCOUNT
+      - PASSWORD=YOUR_PASSWORD
     ports:
       - "15439:5000"
     command: sh -c "flask run --no-debugger --host 0.0.0.0"

@@ -4,10 +4,12 @@ import requests
 import logging
 import os
 import time
-from env import SERVERIP, PASSWORD, ACCOUNT
 
 # 預設設置工作器 ID
 worker_id = int(os.getenv('WORKER_ID', 1))
+SERVERIP = os.getenv('SERVERIP')
+ACCOUNT = os.getenv('ACCOUNT')
+PASSWORD = os.getenv('PASSWORD')
 
 class CameraManager:
     def __init__(self):
@@ -44,6 +46,7 @@ class CameraManager:
             logging.error("無法取得 Token，中止操作。")
             return
 
+        # camera data in db
         url = f"http://{self.SERVERIP}:7000/api/1/camera/get_camera_list"
         headers = {"Authorization": f"Bearer {token}"}
         response = requests.get(url, headers=headers)

@@ -12,7 +12,7 @@ import requests
 from io import BytesIO
 from ultralytics import YOLO
 import json
-MODELURL = os.getenv('MODELURL')
+
 DELDAYS = os.getenv('DELDAYS')
 # 初始化 Redis 連線
 redis_host = 'redis'
@@ -74,7 +74,7 @@ def fetch_frame(camera_id, camera_url, worker_key, stop_event):
     frame_count = 0  # 幀計數器
     last_time = time()  # 記錄上次時間戳
     file_path = None  # 初始化 file_path 變量
-    model_weights_url = MODELURL
+    model_weights_url = "https://ftpweb.intemotech.com/autotrain/Construction_Site_Safety_yolov8n_20240308/weights/best.pt"
     model_weights_save_path = base64.b64encode(model_weights_url.encode()).decode() + ".pt"
 
     # Download model weights
