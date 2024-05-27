@@ -55,7 +55,7 @@
    ```bash
    docker-compose -f docker-compose-deploy.yaml -f docker-compose-redis.yaml build
    docker-compose -f docker-compose-deploy.yaml -f docker-compose-redis.yaml up -d
-
+  ```
 
 ### API文檔
 API 文檔可通過以下地址查看：
