@@ -44,28 +44,33 @@ def predict_with_yolo(model, image_paths, redis_client):
 def remove_old_files(base_path, days=DELDAYS):
     """移除指定路徑中特定日期的檔案"""
     target_date = (datetime.now() - timedelta(days=days)).strftime('%Y%m%d')
-    
-    # 遍歷每個攝影機的目錄
-    for camera_name in os.listdir(base_path):
-        camera_path = os.path.join(base_path, camera_name)
-        if os.path.isdir(camera_path):  # 確保是目錄
-            target_path = os.path.join(camera_path, target_date)
-            if os.path.exists(target_path):
-                for root, dirs, files in os.walk(target_path, topdown=False):
-                    for file in files:
-                        os.remove(os.path.join(root, file))
-                        print(f"Deleted file: {os.path.join(root, file)}")
-                    for dir in dirs:
-                        os.rmdir(os.path.join(root, dir))
-                        print(f"Deleted directory: {os.path.join(root, dir)}")
-                print(f"All files from {target_path} have been deleted.")
-                # 檢查並刪除現在應該是空的根目錄
-                if not os.listdir(target_path):
-                    os.rmdir(target_path)
-                    print(f"Deleted empty directory: {target_path}")
-                print(f"All files from {target_path} have been deleted.")
-            else:
-                print(f"No files found for date {target_date} in {camera_path}.")
+    try:
+        # 遍歷每個攝影機的目錄
+        for camera_name in os.listdir(base_path):
+            camera_path = os.path.join(base_path, camera_name)
+            if os.path.isdir(camera_path):  # 確保是目錄
+                target_path = os.path.join(camera_path, target_date)
+                if os.path.exists(target_path):
+                    for root, dirs, files in os.walk(target_path, topdown=False):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            if os.path.exists(file_path):  # 檢查檔案是否存在
+                                os.remove(file_path)
+                                print(f"Deleted file: {file_path}")
+                        for dir in dirs:
+                            dir_path = os.path.join(root, dir)
+                            if os.path.exists(dir_path) and not os.listdir(dir_path):  # 檢查目錄是否存在且為空
+                                os.rmdir(dir_path)
+                                print(f"Deleted directory: {dir_path}")
+                    print(f"All files from {target_path} have been deleted.")
+                    # 檢查並刪除現在應該是空的根目錄
+                    if os.path.exists(target_path) and not os.listdir(target_path):  # 檢查目錄是否存在且為空
+                        os.rmdir(target_path)
+                        print(f"Deleted empty directory: {target_path}")
+                else:
+                    print(f"No files found for date {target_date} in {camera_path}.")
+    except Exception as e:
+        print(f"Error occurred during file removal: {e}")
 
 
 def fetch_frame(camera_id, camera_url, worker_key, stop_event):
@@ -171,15 +176,20 @@ def monitor_cameras(worker_key, camera_urls):
     return threads
 
 def setup_camera_manager():
-    # 每天檢查一次是否有需要刪除的檔案
-    threading.Timer(10, setup_camera_manager).start()
-    remove_old_files('/app/frames')  # 調整路徑至所有攝影機的根目錄
+    # 獲取worker_id
+    worker_id = os.getenv('WORKER_ID')
+    if worker_id == '1':
+        # 每天檢查一次是否有需要刪除的檔案
+        remove_old_files('/app/frames')  # 調整路徑至所有攝影機的根目錄
+    else:
+        print(f"WORKER_ID is {worker_id}. Skipping file removal.")
+    
+    threading.Timer(86400, setup_camera_manager).start() # 1天執行一次
 
 
 
 def main():
-
-    # setup_camera_manager() 
+    setup_camera_manager() 
     worker_id = os.getenv('WORKER_ID')
     if worker_id is None:
         raise ValueError("WORKER_ID environment variable is not set.")
