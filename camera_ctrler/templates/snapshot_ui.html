@@ -11,7 +11,7 @@
             margin: 0 auto;
         }
         #snapshot {
-            display: none; /* 將圖片隱藏，只在 canvas 上顯示 */
+            display: none;
             max-width: 100%;
             margin: 0 auto;
         }
@@ -19,10 +19,29 @@
             text-align: center;
             margin-top: 20px;
         }
+        button {
+            background-color: #007bff; /* 藍色背景 */
+            color: white; /* 白色文字 */
+            border: none; /* 無邊框 */
+            padding: 10px 20px; /* 內邊距 */
+            text-align: center; /* 文字居中 */
+            text-decoration: none; /* 無下劃線 */
+            display: inline-block; /* 行內區塊元素 */
+            font-size: 16px; /* 字體大小 */
+            margin: 4px 2px; /* 外邊距 */
+            cursor: pointer; /* 鼠標指針 */
+            border-radius: 12px; /* 圓角邊框 */
+            transition-duration: 0.4s; /* 變化持續時間 */
+        }
+        button:hover {
+            background-color: white; /* 滑鼠懸停時背景顏色 */
+            color: black; /* 滑鼠懸停時文字顏色 */
+            border: 2px solid #007bff; /* 滑鼠懸停時邊框 */
+        }
     </style>
 </head>
 <body>
-    <h1>Camera Snapshot</h1>
+    <h1></h1>
     <img id="snapshot" src="" alt="Camera Snapshot">
     <div id="canvasDiv">
         <canvas id="canvas"></canvas>
@@ -30,7 +49,7 @@
     <div id="controls">
         <button onclick="undoRect()">取消框</button>
         <button onclick="saveRects()">儲存框</button>
-        <button onclick="getRects()">獲取框</button>
+        <!-- <button onclick="getRects()">獲取框</button> -->
         <button onclick="clearRects()">清除框</button>
     </div>
     <script>
@@ -44,39 +63,36 @@
 
         window.onload = function() {
             fetchSnapshot(cameraId);
+            getRects()
         };
 
         function adjustCanvas() {
-            const maxWidth = window.innerWidth * 0.9; // 限制最大寬度為視窗寬度的 90%
-            const maxHeight = window.innerHeight * 0.9; // 限制最大高度為視窗高度的 90%
+            const maxWidth = window.innerWidth * 0.9;
+            const maxHeight = window.innerHeight * 0.9;
             const imgRatio = img.naturalWidth / img.naturalHeight;
             const windowRatio = maxWidth / maxHeight;
 
             if (imgRatio > windowRatio) {
-                // 圖片更寬
                 canvas.width = maxWidth;
                 canvas.height = maxWidth / imgRatio;
             } else {
-                // 圖片更高
                 canvas.height = maxHeight;
                 canvas.width = maxHeight * imgRatio;
             }
 
-            scale = canvas.width / img.naturalWidth; // 更新縮放比例
+            scale = canvas.width / img.naturalWidth;
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            rects.forEach(rect => drawRect(rect)); // 重新繪製所有矩形
+            rects.forEach(rect => drawRect(rect));
         }
 
-        window.addEventListener('resize', adjustCanvas); // 在視窗大小變化時調整畫布
+        window.addEventListener('resize', adjustCanvas);
 
         function fetchSnapshot(ID) {
             fetch(`/get_snapshot/${ID}`)
                 .then(response => response.ok ? response.blob() : Promise.reject('網絡響應不是ok'))
                 .then(blob => {
                     const url = URL.createObjectURL(blob);
-                    img.onload = () => {
-                        zoomInImage(); // 放大圖片並設置 canvas 尺寸
-                    };
+                    img.onload = adjustCanvas;
                     img.src = url;
                 })
                 .catch(error => {
@@ -85,12 +101,7 @@
                 });
         }
 
-        let scale = 3; // 放大倍數
-
-        function zoomInImage() {
-            adjustCanvas(); // 調整畫布和圖像尺寸
-            rects.forEach(rect => drawRect(rect)); // 繪製所有矩形
-        }
+        let scale = 1;
 
         function drawRect(rect) {
             ctx.strokeStyle = 'red';
@@ -98,30 +109,18 @@
             ctx.strokeRect(rect.x * scale, rect.y * scale, rect.width * scale, rect.height * scale);
         }
 
-        function calculateScale() {
-            const imgElement = document.getElementById('snapshot');
-            scale = imgElement.clientWidth / img.naturalWidth;
-            canvas.width = img.naturalWidth; // 根據圖片的原始寬度設定 canvas 寬度
-            canvas.height = img.naturalHeight; // 根據圖片的原始高度設定 canvas 高度
-            ctx.drawImage(img, 0, 0); // 重新繪製圖片
-            rects.forEach(rect => drawRect(rect)); // 重新繪製所有矩形
-
-            // 放大圖片
-            zoomInImage();
-        }
-
         canvas.addEventListener('mousedown', function(e) {
-            startX = e.offsetX / scale; // Adjust for scaling
+            startX = e.offsetX / scale;
             startY = e.offsetY / scale;
             isDrawing = true;
         });
 
         canvas.addEventListener('mousemove', function(e) {
             if (isDrawing) {
-                const mouseX = e.offsetX / scale; // Adjust for scaling
+                const mouseX = e.offsetX / scale;
                 const mouseY = e.offsetY / scale;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height); // 確保使用放大後的尺寸重新繪製圖片
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 rects.forEach(rect => drawRect(rect));
                 drawRect({x: startX, y: startY, width: mouseX - startX, height: mouseY - startY});
             }
@@ -134,21 +133,19 @@
                 const newRect = {x: startX, y: startY, width: endX - startX, height: endY - startY};
                 rects.push(newRect);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height); // 確保使用放大後的尺寸重新繪製圖片
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 rects.forEach(rect => drawRect(rect));
-                drawRect(newRect);
                 isDrawing = false;
-                saveRect(newRect);
             }
         });
 
-        function saveRect(rect) {
+        function saveRects() {
             fetch(`/rectangles/${cameraId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify([rect])
+                body: JSON.stringify(rects)
             }).then(response => response.json())
               .then(data => console.log(data.message));
         }
@@ -159,7 +156,7 @@
                 .then(data => {
                     rects = data;
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height); // 使用放大後的尺寸重新繪製圖片
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                     rects.forEach(rect => drawRect(rect));
                 })
                 .catch(error => console.error('Error:', error));
@@ -172,17 +169,17 @@
               .then(data => {
                 rects = [];
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height); // 使用放大後的尺寸重新繪製圖片
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 alert(data.message);
             })
             .catch(error => console.error('Error:', error));
         }
 
         function undoRect() {
-            rects.pop(); // 移除最近添加的矩形框
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // 清除畫布
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height); // 重新繪製放大後的圖像
-            rects.forEach(rect => drawRect(rect)); // 重新繪製所有剩餘的矩形框
+            rects.pop();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            rects.forEach(rect => drawRect(rect));
         }
     </script>
 </body>
