@@ -1,6 +1,8 @@
 # Camera-Stream-Recognition-System
 攝影機串流辨識系統
-![Uploading image.png…]()
+
+![image](https://github.com/dan246/Camera-Stream-Recognition-System/assets/72447312/c247f43d-a380-4728-a6a0-631e11020b21)
+
 
 支援 RTSP & HTTP
 
