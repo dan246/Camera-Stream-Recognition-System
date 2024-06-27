@@ -1,8 +1,6 @@
 # Camera-Stream-Recognition-System
 攝影機串流辨識系統
 
-[中文版本](https://github.com/dan246/Camera-Stream-Recognition-System/blob/main/README.md)
-
 支援 RTSP & HTTP
 
 這個專案使用 Python 和 Redis，實現對多個攝影機串流的管理和辨識功能。主要功能包括攝影機串流的實時捕獲、物件辨識、圖像保存、ReID（再辨識）以及串流地址的動態更新。
