@@ -7,6 +7,22 @@ services:
     ports:
       - "6380:6379"
 
+  worker_del:
+    build:
+      context: ./
+      dockerfile: Dockerfile/rtsptestDockerfile
+    image: raidavidyang/rtsptest
+    restart: always
+    # user: '0:0' # 以 root 權限運行
+    environment:
+      - WORKER_ID=999
+    depends_on:
+      - redis
+    volumes:
+      - ./rtsp_test/frames/:/app/frames
+    # command: sleep 100000
+
+
   worker_1:
     build:
       context: ./
