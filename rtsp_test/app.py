@@ -178,13 +178,12 @@ def monitor_cameras(worker_key, camera_urls):
 def setup_camera_manager():
     # 獲取worker_id
     worker_id = os.getenv('WORKER_ID')
-    if worker_id == '1':
+    if worker_id == '999':
         # 每天檢查一次是否有需要刪除的檔案
         remove_old_files('/app/frames')  # 調整路徑至所有攝影機的根目錄
+        threading.Timer(10, setup_camera_manager).start()
     else:
         print(f"WORKER_ID is {worker_id}. Skipping file removal.")
-    
-    threading.Timer(86400, setup_camera_manager).start() # 1天執行一次
 
 
 
